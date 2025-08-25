@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Face Recognition Attendance</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; }
+    header { background:#2c3e50; color:white; padding:1rem; text-align:center; }
+    main { max-width:900px; margin:2rem auto; background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+    section { margin-bottom:2rem; }
+    h2 { border-bottom:2px solid #eee; padding-bottom:0.5rem; }
+    button { margin:0.25rem; padding:0.5rem 1rem; border:none; background:#3498db; color:white; border-radius:4px; cursor:pointer; }
+    button:hover { background:#2980b9; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #ddd; padding:0.5rem; text-align:left; }
+    th { background:#f2f2f2; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Face Recognition Attendance System</h1>
+  </header>
+
+  <main>
+    <!-- Camera Section -->
+    <section>
+      <h2>Live Camera (Backend Capture)</h2>
+      <p>This will trigger the backend to capture an image and run recognition.</p>
+      <button id="scanBtn">Scan & Mark Attendance</button>
+      <p id="status">Waiting...</p>
+    </section>
+
+    <!-- Attendance Records -->
+    <section>
+      <h2>Attendance Records</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="records">
+          <!-- Filled dynamically -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const scanBtn = document.getElementById('scanBtn');
+    const statusEl = document.getElementById('status');
+    const records = document.getElementById('records');
+
+    scanBtn.addEventListener('click', async () => {
+      statusEl.textContent = 'Scanning... please wait.';
+      try {
+        // Adjust this URL if backend runs elsewhere
+        const res = await fetch('http://127.0.0.1:8000/tests');
+        const text = await res.text();
+        statusEl.textContent = text;
+
+        // Extract name from backend message
+        const nameMatch = text.match(/marked (.*)$/);
+        const name = nameMatch ? nameMatch[1] : 'Unknown';
+        addRecord(name, "Present");
+
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Error connecting to backend.';
+      }
+    });
+
+    function addRecord(name, status) {
+      const row = records.insertRow(0);
+      row.insertCell(0).textContent = records.rows.length;
+      row.insertCell(1).textContent = name;
+      row.insertCell(2).textContent = new Date().toLocaleTimeString();
+      row.insertCell(3).textContent = status;
+    }
+  </script>
+</body>
+</html>
