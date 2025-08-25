@@ -44,7 +44,7 @@ service = build("drive", "v3", credentials=creds)
 
 def fill_table():
     # Example: list files in a shared folder
-    FOLDER_ID = "15ZQ7tSCuk0WgqCE_8V0ZsM-IWZXCSWyv"  # from Drive URL
+    FOLDER_ID = "FOLDER_ID"  # from Drive URL
     query = f"'{FOLDER_ID}' in parents and trashed=false"
 
     results = service.files().list(q=query, fields="files(id, name, mimeType)").execute()
@@ -77,4 +77,5 @@ def fill_table():
 
 cursor.close()
 conn.close()
+
 
