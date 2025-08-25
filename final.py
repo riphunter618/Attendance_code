@@ -51,7 +51,7 @@ FOLDER_ID = "15ZQ7tSCuk0WgqCE_8V0ZsM-IWZXCSWyv"  # from Drive URL
 # print("Uploaded File ID:", file.get("id"))
 while True:  # initialized the connection to the postgres db
     try:
-        conn = psycopg2.connect(host='localhost', database='recog', user='postgres', password='cobbvanth618',
+        conn = psycopg2.connect(host='host', database='db', user='usr', password='password',
                                 cursor_factory=RealDictCursor)
         # cursor = conn.cursor()
         print('connection successful')
@@ -168,3 +168,4 @@ def test33():
     else:
         os.remove(file_name)
         return f'your attendance has been marked {x}'
+
