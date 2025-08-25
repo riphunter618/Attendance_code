@@ -6,7 +6,7 @@ from deepface import DeepFace
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-conn = psycopg2.connect(host='localhost', database='recog', user='postgres', password='cobbvanth618',
+conn = psycopg2.connect(host='host', database='db', user='usr', password='password',
                         cursor_factory=RealDictCursor)
 cursor = conn.cursor()
 
@@ -77,3 +77,4 @@ def fill_table():
 
 cursor.close()
 conn.close()
+
