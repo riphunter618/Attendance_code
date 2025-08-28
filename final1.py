@@ -17,16 +17,29 @@ import numpy as np
 import threading
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_processor.log'),
+        logging.StreamHandler()
+    ]
+)
 
 
 class ImageData(BaseModel):
     image: str  # base64 string
+    name: str | None = None  # optional, only for new user
+    designation: str | None = None  # optional, only for new user
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     thread = threading.Thread(target=check, daemon=True)
     thread.start()
+    logging.info('background check function is running')
     yield
 
 
@@ -38,7 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+logging.info('cors middleware is connected')
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 creds = None
@@ -47,6 +60,7 @@ if os.path.exists("token.json"):
     creds = Credentials.from_authorized_user_file("token.json", SCOPES)
 
 service = build("drive", "v3", credentials=creds)  # initializing the connection to google drive
+logging.info('Google drive API initialized')
 FOLDER_ID = "15ZQ7tSCuk0WgqCE_8V0ZsM-IWZXCSWyv"  # from Drive URL
 # file_metadata = {"name": "img1"}
 # media = MediaFileUpload("img1.jpg", resumable=True)
@@ -57,53 +71,59 @@ FOLDER_ID = "15ZQ7tSCuk0WgqCE_8V0ZsM-IWZXCSWyv"  # from Drive URL
 # print("Uploaded File ID:", file.get("id"))
 while True:  # initialized the connection to the postgres db
     try:
-        conn = psycopg2.connect(host='localhost', database='recog', user='postgres', password='cobbvanth618',
-                                cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(
+            host="aws-1-ap-south-1.pooler.supabase.com",
+            port=6543,  # <-- use the port shown in dashboard
+            database="postgres",
+            user="postgres.qltgyrarlynsvhuvdhbi",  # full user string
+            password="cobbvanth618",  # from dashboard, not your login
+            sslmode="require",
+            cursor_factory=RealDictCursor
+        )
         # cursor = conn.cursor()
         print('connection successful')
+        logging.info('connected to the database')
         break
     except Exception as error:
         print('connection failed')
+        logging.info('connection has failed trying again')
         time.sleep(2)
 cursor = conn.cursor()
-file_name = 'ganesh12.jpg'
-table_name = 'faces1'
+temp_file_name = 'ganesh12.jpg'
+table_name = 'faces4'
 
 
-def capture_image():  # capturing image from webcam
-    global file_name
-    cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    ret, frame = cam.read()
-    if ret:
-        cv2.imshow("Captured", frame)
-        cv2.imwrite(file_name, frame)
-        cv2.waitKey(10)
-        # cv2.destroyWindow("Captured")
-    else:
-        return 'Failed capture image'
-    cam.release()
-    query_embedding = DeepFace.represent(img_path=frame, model_name="ArcFace")[0]["embedding"]
+def capture_image(data):  # capturing image from webcam
+    global temp_file_name
+    header, encoded = data.image.split(",", 1)
+    img_bytes = base64.b64decode(encoded)
+    img_array = np.frombuffer(img_bytes, np.uint8)
+    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    cv2.imwrite(temp_file_name, frame)
+    query_embedding = DeepFace.represent(frame, model_name="ArcFace", enforce_detection=False)[0]["embedding"]
     query_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+    logging.info('image has been successfully captured')
     return query_str
 
 
 def verify(query_str):  # verifying the image with the db
     cursor.execute(
         f"""
-        SELECT name, image_url, embedding <-> %s::vector AS distance
+        SELECT name, Designation, embedding <-> %s::vector AS distance
         FROM {table_name}
         ORDER BY embedding <-> %s::vector
         LIMIT 5
         """,
         (query_str, query_str))
+    logging.info('verification started')
     return cursor.fetchall()
 
 
-def add_new_toDb(name, query_str1):  # adds a new image to db
-    image_url = f'{name}jpg.'
-    cursor.execute(f"""INSERT INTO {table_name} (name, embedding, image_url) VALUES (%s, %s::vector, %s)""",
-                   (name, query_str1, image_url))
+def add_new_toDb(name, query_str1, designation):  # adds a new image to db
+    cursor.execute(f"""INSERT INTO {table_name} (name, embedding, Designation) VALUES (%s, %s::vector, %s)""",
+                   (name, query_str1, designation))
     conn.commit()
+    logging.info('added to the database')
     return f'added successfully'
 
 
@@ -114,6 +134,7 @@ def add_new_toDrive(name):  # adds a new image to drive
     file1 = service.files().create(
         body=file_metadata1, media_body=media1, fields="id"
     ).execute()
+    logging.info('added to the drive folder')
 
 
 def check():  # checks if an image was manually added to the drive and reflects that change in the db
@@ -142,7 +163,7 @@ def check():  # checks if an image was manually added to the drive and reflects 
                         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                         embedding = \
                             DeepFace.represent(img,
-                                               model_name='ArcFace')[0][
+                                               model_name='ArcFace', enforce_detection=False)[0][
                                 'embedding']
                         embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
                         add_new_toDb(query_str1=embedding_str, name=file_name1)
@@ -150,9 +171,11 @@ def check():  # checks if an image was manually added to the drive and reflects 
                     except Exception as e:
                         # maybe try deleting the duplicate image in drive
                         # changing the embedding column to the primary key in the db ensures uniqueness
+                        logging.info(f'error downloading {file_name1}:{e}')
                         print(f"❌ Error downloading {file_name1}: {e}")
             time.sleep(300)  # prevent 100% CPU spin
         except Exception as e:
+            logging.info('recheck drive connection')
             print(f"❌ Error in Drive check loop: {e}")
             time.sleep(300)
 
@@ -162,32 +185,56 @@ def root():
     return {'message': 'hello world'}
 
 
-@app.get("/records")
-def get_records():
-    cursor.execute(f"SELECT name, image_url, timestamp FROM {table_name}")
-    return cursor.fetchall()
-
-
 @app.post("/tests")
 def test33(data: ImageData):
     try:
         # Decode base64
-        header, encoded = data.image.split(",", 1)
-        img_bytes = base64.b64decode(encoded)
-        img_array = np.frombuffer(img_bytes, np.uint8)
-        frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-        cv2.imwrite(file_name, frame)
-        query_embedding = DeepFace.represent(frame, model_name="ArcFace")[0]["embedding"]
-        query_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        query_str = capture_image(data)
+        # res = verify(query_str)
+        # x = res[0]['name']
+
+        if data.name and data.designation != 'guest':
+            file_name = f'{data.name}.jpg'
+            os.rename(temp_file_name, file_name)
+            add_new_toDb(data.name, query_str, data.designation)
+            add_new_toDrive(file_name)  # you might want to save frame instead of old file_name
+            os.remove(file_name)
+            logging.info('new users information has been added to the db and drive')
+            return {
+                "status": "registered",
+                "message": f"✅ {data.name} ({data.designation}) has been registered and attendance marked",
+                "name": data.name,
+                "designation": data.designation}
+        elif data.name and data.designation == 'guest':
+            logging.info('a guest is trying to register so only temporarily register them')
+            os.remove(temp_file_name)
+            return {
+                "status": "registered",
+                "message": f"✅ {data.name} ({data.designation}) has been temporarily registered and attendance marked",
+                "name": data.name,
+                "designation": data.designation}
+
+        # Otherwise → try to verify
         res = verify(query_str)
         x = res[0]['name']
-        if res[0]['distance'] >= 4.5:  # this means someone new is trying to register
-            add_new_toDb('ganesh', query_str)
-            add_new_toDrive(file_name)
-            # os.remove(file_name)
-            return {"message": "✅ Your attendance has been marked ganesh"}
+        desig = res[0]['designation']
+
+        if res[0]['distance'] >= 4.5:  # not recognized
+            logging.info('new user trying to register')
+            return {
+                "status": "new_user",
+                "message": "❌ Face not recognized. Please provide your name and designation."
+            }
         else:
-            return {"message": f"✅ Your attendance has been marked {x}"}
+            logging.info('verification successful')
+            os.remove(temp_file_name)
+            return {
+                "status": "success",
+                "message": f"✅ Attendance marked for {x} ({desig})",
+                "name": x,
+                "designation": desig
+            }
 
     except Exception as e:
-        return {"message": f"Error: {str(e)}"}
+        logging.info(f'error is {e}')
+        return {"status": "error", "message": f"Error: {str(e)}"}
