@@ -51,7 +51,7 @@ if os.path.exists("token.json"):
 
 service = build("drive", "v3", credentials=creds)  # initializing the connection to google drive
 logging.info('Google drive API initialized')
-FOLDER_ID = "15ZQ7tSCuk0WgqCE_8V0ZsM-IWZXCSWyv"  # from Drive URL
+FOLDER_ID = os.getenv('FOLDER_ID')  # from Drive URL
 # file_metadata = {"name": "img1"}
 # media = MediaFileUpload("img1.jpg", resumable=True)
 # file = service.files().create(
@@ -188,4 +188,5 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
