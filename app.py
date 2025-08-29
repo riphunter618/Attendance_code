@@ -54,10 +54,14 @@ app.add_middleware(
 logging.info('cors middleware is connected')
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
-creds = None
-# Load existing token if it exists
-if os.path.exists("token.json"):
-    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+creds = Credentials(
+    token=None,  # empty on purpose, will refresh
+    refresh_token=os.getenv("REFRESH_TOKEN"),
+    token_uri="https://oauth2.googleapis.com/token",
+    client_id=os.getenv("CLIENT_ID"),
+    client_secret=os.getenv("CLIENT_SECRET"),
+    scopes=SCOPES
+)
 
 service = build("drive", "v3", credentials=creds)  # initializing the connection to google drive
 logging.info('Google drive API initialized')
@@ -238,3 +242,4 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
