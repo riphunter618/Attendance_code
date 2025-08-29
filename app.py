@@ -1,9 +1,7 @@
-import cv2
 import warnings
 import base64
 
 warnings.filterwarnings('ignore')
-from deepface import DeepFace
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
@@ -35,15 +33,7 @@ class ImageData(BaseModel):
     designation: str | None = None  # optional, only for new user
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    thread = threading.Thread(target=check, daemon=True)
-    thread.start()
-    logging.info('background check function is running')
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # or restrict to ["http://localhost:5500"] etc.
@@ -54,14 +44,10 @@ app.add_middleware(
 logging.info('cors middleware is connected')
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
-creds = Credentials(
-    token=None,  # empty on purpose, will refresh
-    refresh_token=os.getenv("REFRESH_TOKEN"),
-    token_uri="https://oauth2.googleapis.com/token",
-    client_id=os.getenv("CLIENT_ID"),
-    client_secret=os.getenv("CLIENT_SECRET"),
-    scopes=SCOPES
-)
+creds = None
+# Load existing token if it exists
+if os.path.exists("token.json"):
+    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
 
 service = build("drive", "v3", credentials=creds)  # initializing the connection to google drive
 logging.info('Google drive API initialized')
@@ -91,13 +77,16 @@ while True:  # initialized the connection to the postgres db
     except Exception as error:
         print('connection failed')
         logging.info('connection has failed trying again')
-        time.sleep(2)
+        time.sleep(5)
 cursor = conn.cursor()
 temp_file_name = 'ganesh12.jpg'
 table_name = 'faces4'
 
 
 def capture_image(data):  # capturing image from webcam
+    import cv2
+    warnings.filterwarnings('ignore')
+    from deepface import DeepFace
     global temp_file_name
     header, encoded = data.image.split(",", 1)
     img_bytes = base64.b64decode(encoded)
@@ -139,50 +128,6 @@ def add_new_toDrive(name):  # adds a new image to drive
         body=file_metadata1, media_body=media1, fields="id"
     ).execute()
     logging.info('added to the drive folder')
-
-
-def check():  # checks if an image was manually added to the drive and reflects that change in the db
-    while True:
-        try:
-            query = f"'{FOLDER_ID}' in parents and trashed=false"
-            results = service.files().list(
-                q=query,
-                fields="files(id, name, mimeType, createdTime)",
-                orderBy="createdTime desc",
-            ).execute()
-            drive_files = results.get("files", [])
-            drive_length = len(drive_files)
-
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-            db_length = cursor.fetchone()["count"]
-            if drive_length > db_length:
-                diff = drive_length - db_length
-                for new_file in drive_files[:diff]:
-                    file_id = new_file['id']
-                    file_name1 = new_file['name']
-                    try:
-                        request = service.files().get_media(fileId=file_id)
-                        image_content = request.execute()
-                        np_arr = np.frombuffer(image_content, np.uint8)
-                        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-                        embedding = \
-                            DeepFace.represent(img,
-                                               model_name='ArcFace', enforce_detection=False)[0][
-                                'embedding']
-                        embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
-                        add_new_toDb(query_str1=embedding_str, name=file_name1)
-                        # print(embedding)
-                    except Exception as e:
-                        # maybe try deleting the duplicate image in drive
-                        # changing the embedding column to the primary key in the db ensures uniqueness
-                        logging.info(f'error downloading {file_name1}:{e}')
-                        print(f"❌ Error downloading {file_name1}: {e}")
-            time.sleep(300)  # prevent 100% CPU spin
-        except Exception as e:
-            logging.info('recheck drive connection')
-            print(f"❌ Error in Drive check loop: {e}")
-            time.sleep(300)
-
 
 @app.get('/')
 def root():
@@ -242,4 +187,3 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
-
