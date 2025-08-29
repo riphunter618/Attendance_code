@@ -208,7 +208,7 @@
 
       statusEl.textContent = 'Scanning... please wait.';
       try {
-        const res = await fetch('http://127.0.0.1:8000/tests', {
+        const res = await fetch('https://attendance-code.onrender.com/tests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image })
@@ -234,7 +234,7 @@
       const image = lastCapturedImage;
 
       try {
-        const res = await fetch('http://127.0.0.1:8000/tests', {
+        const res = await fetch('https://attendance-code.onrender.com/tests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image, name, designation })
@@ -266,3 +266,4 @@
   </script>
 </body>
 </html>
+
