@@ -17,6 +17,9 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import logging
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""   # Disable all GPUs
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Suppress TF warnings
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -188,5 +191,6 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
 
