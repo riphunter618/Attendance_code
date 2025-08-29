@@ -129,7 +129,8 @@ def add_new_toDrive(name):  # adds a new image to drive
     ).execute()
     logging.info('added to the drive folder')
 
-@app.get('/')
+@app.get("/", include_in_schema=False)
+@app.head("/", include_in_schema=False)
 def root():
     return {'message': 'hello world'}
 
@@ -187,3 +188,4 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
