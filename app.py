@@ -41,7 +41,10 @@ origins = [
     "http://127.0.0.1",          # another common variant
     "http://localhost:5500",     # if you run via VSCode Live Server
     "http://127.0.0.1:5500",     # same, different form
-    "null",                      # if opening HTML by double-click (file://) → origin is "null"
+    "null",
+    "http://localhost:63342/PythonProject1/index1.html?_ijt=urhcjcc54jb1nluh84okjag1sp&_ij_reload=RELOAD_ON_SAVE",
+    "http://localhost:63342"
+    # if opening HTML by double-click (file://) → origin is "null"
 ]
 
 app = FastAPI()
@@ -199,6 +202,7 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
 
 
