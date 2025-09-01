@@ -1,3 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Disable all GPUs
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TF warnings
 import warnings
 import base64
 
@@ -8,7 +11,6 @@ import time
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
@@ -17,8 +19,6 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import logging
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Disable all GPUs
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Suppress TF warnings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -198,6 +198,7 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
 
 
