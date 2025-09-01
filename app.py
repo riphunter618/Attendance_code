@@ -36,10 +36,18 @@ class ImageData(BaseModel):
     designation: str | None = None  # optional, only for new user
 
 
+origins = [
+    "http://localhost",          # for local frontend
+    "http://127.0.0.1",          # another common variant
+    "http://localhost:5500",     # if you run via VSCode Live Server
+    "http://127.0.0.1:5500",     # same, different form
+    "null",                      # if opening HTML by double-click (file://) → origin is "null"
+]
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or restrict to ["http://localhost:5500"] etc.
+    allow_origins=origins,  # or restrict to ["http://localhost:5500"] etc.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -191,6 +199,7 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
 
 
