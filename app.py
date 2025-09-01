@@ -37,19 +37,15 @@ class ImageData(BaseModel):
     designation: str | None = None  # optional, only for new user
 
 origins = [
-    "http://localhost:63342",
-    "http://localhost:63342/", # PyCharm local webserver
-    "http://127.0.0.1:5500",    # VSCode Live Server (if you ever use it)
-    "http://localhost:5500",
-    "https://attendance-code.onrender.com",
-    "null",                     # covers file:// origins
+    "http://localhost:63342",       # local frontend
+    "https://attendance-code.onrender.com",  # deployed frontend
 ]
 
 app = FastAPI(default_response_class=JSONResponse)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],  # or restrict to ["http://localhost:5500"] etc.
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -146,7 +142,16 @@ def add_new_toDrive(name):  # adds a new image to drive
 def root():
     return {'message': 'hello world'}
 
-
+@app.options("/tests")
+async def options_tests():
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+    )
 @app.post("/tests")
 def test33(data: ImageData):
     try:
@@ -203,6 +208,7 @@ def test33(data: ImageData):
             status_code=500,
             content={"status": "error", "message": f"Error: {str(e)}"}
         )
+
 
 
 
