@@ -12,6 +12,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import threading
@@ -36,14 +37,15 @@ class ImageData(BaseModel):
     designation: str | None = None  # optional, only for new user
 
 origins = [
-    "http://localhost:63342",   # PyCharm local webserver
+    "http://localhost:63342",
+    "http://localhost:63342/", # PyCharm local webserver
     "http://127.0.0.1:5500",    # VSCode Live Server (if you ever use it)
     "http://localhost:5500",
     "https://attendance-code.onrender.com",
     "null",                     # covers file:// origins
 ]
 
-app = FastAPI()
+app = FastAPI(default_response_class=JSONResponse)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],  # or restrict to ["http://localhost:5500"] etc.
@@ -197,7 +199,11 @@ def test33(data: ImageData):
 
     except Exception as e:
         logging.info(f'error is {e}')
-        return {"status": "error", "message": f"Error: {str(e)}"}
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": f"Error: {str(e)}"}
+        )
+
 
 
 
