@@ -143,16 +143,7 @@ def add_new_toDrive(name):  # adds a new image to drive
 def root():
     return {'message': 'hello world'}
 
-@app.options("/tests")
-async def options_tests():
-    return JSONResponse(
-        content={},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-    )
+
 @app.post("/tests")
 def test33(data: ImageData):
     try:
@@ -209,21 +200,3 @@ def test33(data: ImageData):
             status_code=500,
             content={"status": "error", "message": f"Error: {str(e)}"}
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
