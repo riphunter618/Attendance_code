@@ -39,6 +39,7 @@ origins = [
     "http://localhost:63342",   # PyCharm local webserver
     "http://127.0.0.1:5500",    # VSCode Live Server (if you ever use it)
     "http://localhost:5500",
+    "https://attendance-code.onrender.com",
     "null",                     # covers file:// origins
 ]
 
@@ -197,6 +198,7 @@ def test33(data: ImageData):
     except Exception as e:
         logging.info(f'error is {e}')
         return {"status": "error", "message": f"Error: {str(e)}"}
+
 
 
 
