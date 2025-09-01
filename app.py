@@ -44,7 +44,7 @@ origins = [
 app = FastAPI(default_response_class=JSONResponse)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],  # or restrict to ["http://localhost:5500"] etc.
+    allow_origins=origins,  # or restrict to ["http://localhost:5500"] etc.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -208,6 +208,7 @@ def test33(data: ImageData):
             status_code=500,
             content={"status": "error", "message": f"Error: {str(e)}"}
         )
+
 
 
 
