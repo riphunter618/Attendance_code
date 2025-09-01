@@ -38,7 +38,8 @@ class ImageData(BaseModel):
 
 origins = [
     "http://localhost:63342",       # local frontend
-    "https://attendance-code.onrender.com",  # deployed frontend
+    "https://attendance-code.onrender.com",
+    "null",# deployed frontend
 ]
 
 app = FastAPI(default_response_class=JSONResponse)
@@ -208,6 +209,7 @@ def test33(data: ImageData):
             status_code=500,
             content={"status": "error", "message": f"Error: {str(e)}"}
         )
+
 
 
 
