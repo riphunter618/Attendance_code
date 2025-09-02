@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -18,6 +20,7 @@ def get_connection():
     return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
 app = FastAPI(default_response_class=JSONResponse)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class ImageData(BaseModel):
     image: str  # base64
@@ -26,6 +29,12 @@ class RegisterData(BaseModel):
     image: str
     name: str
     designation: str
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return FileResponse("static/index.html")
+
 
 @app.post("/tests")
 def submit_job(data: ImageData):
@@ -95,3 +104,4 @@ def register_user(data: RegisterData):
         "face_id": face_id,
         "job_id": job_id
     }
+
