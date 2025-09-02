@@ -89,7 +89,7 @@ while True:  # initialized the connection to the postgres db
         time.sleep(5)
 cursor = conn.cursor()
 temp_file_name = 'ganesh12.jpg'
-table_name = 'faces4'
+table_name = 'faces5'
 
 
 def capture_image(data):  # capturing image from webcam
@@ -101,7 +101,7 @@ def capture_image(data):  # capturing image from webcam
     img_bytes = base64.b64decode(encoded)
     img_array = np.frombuffer(img_bytes, np.uint8)
     frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-    query_embedding = DeepFace.represent(frame, model_name="ArcFace", enforce_detection=False)[0]["embedding"]
+    query_embedding = DeepFace.represent(frame, model_name="Facenet", enforce_detection=False)[0]["embedding"]
     query_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
     logging.info('image has been successfully captured')
     return query_str
@@ -246,4 +246,5 @@ def test33(data: ImageData):
             status_code=500,
             content={"stage": "unexpected", "error": str(e)}
         )
+
 
