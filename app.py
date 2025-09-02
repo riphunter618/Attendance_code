@@ -147,56 +147,103 @@ def root():
 @app.post("/tests")
 def test33(data: ImageData):
     try:
-        # Decode base64
-        query_str = capture_image(data)
-        # res = verify(query_str)
-        # x = res[0]['name']
+        # -------------------------------
+        # Step 1: Capture + Encode Face
+        # -------------------------------
+        try:
+            query_str = capture_image(data)
+            logging.info("Image captured and embedding created")
+        except Exception as e:
+            logging.error(f"❌ DeepFace failed: {e}")
+            return JSONResponse(
+                status_code=500,
+                content={"stage": "capture_image", "error": str(e)}
+            )
 
-        if data.name and data.designation != 'guest':
-            file_name = f'{data.name}.jpg'
-            os.rename(temp_file_name, file_name)
-            add_new_toDb(data.name, query_str, data.designation)
-            add_new_toDrive(file_name)  # you might want to save frame instead of old file_name
-            os.remove(file_name)
-            logging.info('new users information has been added to the db and drive')
-            return {
-                "status": "registered",
-                "message": f"✅ {data.name} ({data.designation}) has been registered and attendance marked",
-                "name": data.name,
-                "designation": data.designation}
-        elif data.name and data.designation == 'guest':
-            logging.info('a guest is trying to register so only temporarily register them')
-            os.remove(temp_file_name)
-            return {
-                "status": "registered",
-                "message": f"✅ {data.name} ({data.designation}) has been temporarily registered and attendance marked",
-                "name": data.name,
-                "designation": data.designation}
+        # -------------------------------
+        # Step 2: New User Registration
+        # -------------------------------
+        if data.name:
+            if data.designation != "guest":
+                try:
+                    file_name = f"{data.name}.jpg"
+                    os.rename(temp_file_name, file_name)
 
-        # Otherwise → try to verify
-        res = verify(query_str)
-        x = res[0]['name']
-        desig = res[0]['designation']
+                    add_new_toDb(data.name, query_str, data.designation)
+                    logging.info("✅ Added to DB")
 
-        if res[0]['distance'] >= 4.5:  # not recognized
-            logging.info('new user trying to register')
+                    add_new_toDrive(file_name)
+                    logging.info("✅ Added to Drive")
+
+                    os.remove(file_name)
+
+                    return {
+                        "status": "registered",
+                        "message": f"{data.name} ({data.designation}) registered and attendance marked",
+                        "name": data.name,
+                        "designation": data.designation,
+                    }
+                except Exception as e:
+                    logging.error(f"❌ Failed during registration: {e}")
+                    return JSONResponse(
+                        status_code=500,
+                        content={"stage": "registration", "error": str(e)}
+                    )
+
+            else:  # Guest
+                try:
+                    os.remove(temp_file_name)
+                except FileNotFoundError:
+                    pass
+                return {
+                    "status": "registered",
+                    "message": f"{data.name} (guest) temporarily registered",
+                    "name": data.name,
+                    "designation": data.designation,
+                }
+
+        # -------------------------------
+        # Step 3: Verification (existing users)
+        # -------------------------------
+        try:
+            res = verify(query_str)
+            x = res[0]["name"]
+            desig = res[0]["designation"]
+            distance = res[0]["distance"]
+            logging.info(f"Verification result: {x}, distance={distance}")
+        except Exception as e:
+            logging.error(f"❌ Database verification failed: {e}")
+            return JSONResponse(
+                status_code=500,
+                content={"stage": "verification", "error": str(e)}
+            )
+
+        # -------------------------------
+        # Step 4: Decision
+        # -------------------------------
+        if distance >= 4.5:  # not recognized
+            logging.info("⚠️ Face not recognized → new user required")
             return {
                 "status": "new_user",
-                "message": "❌ Face not recognized. Please provide your name and designation."
+                "message": "Face not recognized. Please provide name and designation.",
             }
         else:
-            logging.info('verification successful')
-            os.remove(temp_file_name)
+            try:
+                os.remove(temp_file_name)
+            except FileNotFoundError:
+                pass
+            logging.info(f"✅ Attendance marked for {x} ({desig})")
             return {
                 "status": "success",
-                "message": f"✅ Attendance marked for {x} ({desig})",
+                "message": f"Attendance marked for {x} ({desig})",
                 "name": x,
-                "designation": desig
+                "designation": desig,
             }
 
     except Exception as e:
-        logging.info(f'error is {e}')
+        # Fallback: catch anything unexpected
+        logging.error(f"🔥 Unexpected error in /tests: {e}")
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": f"Error: {str(e)}"}
+            content={"stage": "unexpected", "error": str(e)}
         )
