@@ -12,7 +12,7 @@ DB_CONFIG = {
     "port": 6543,
     "database": "postgres",
     "user": "postgres.qltgyrarlynsvhuvdhbi",
-    "password": "cobbvanth68",
+    "password": "cobbvanth618",
     "sslmode": "require"
 }
 
@@ -104,4 +104,5 @@ def register_user(data: RegisterData):
         "face_id": face_id,
         "job_id": job_id
     }
+
 
