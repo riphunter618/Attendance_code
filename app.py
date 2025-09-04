@@ -121,7 +121,9 @@ def register_user(data: RegisterData):
         """, (
             job_id,
             data.image,
-            json.dumps({"register_face_id": face_id})
+            json.dumps({"register_face_id": face_id,
+                       "name":data.name,
+                       "designation":data.designation})
         ))
 
         conn.commit()
